@@ -1,0 +1,43 @@
+﻿  Game.cpp
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(52,31): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+          with
+          [
+              T=float
+          ]
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(53,42): warning C4244: 'argument': conversion from 'const unsigned int' to 'T', possible loss of data
+          with
+          [
+              T=float
+          ]
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(53,31): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+          with
+          [
+              T=float
+          ]
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(59,34): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+          with
+          [
+              T=float
+          ]
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(60,44): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+          with
+          [
+              T=float
+          ]
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(60,17): warning C4244: 'argument': conversion from 'const unsigned int' to 'T', possible loss of data
+          with
+          [
+              T=float
+          ]
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(78,33): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+          with
+          [
+              T=float
+          ]
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(77,42): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+          with
+          [
+              T=float
+          ]
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(83,12): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+  AIMaze.vcxproj -> C:\Users\archi\Desktop\AIMaze\x64\Debug\AIMaze.exe
