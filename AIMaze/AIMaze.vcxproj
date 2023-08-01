@@ -143,6 +143,7 @@
     <ClInclude Include="Line.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="Tile.h" />
+    <ClInclude Include="TileType.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

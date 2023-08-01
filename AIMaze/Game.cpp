@@ -30,6 +30,9 @@ Game::Game() {
 	wallTexture.setSmooth(true);
 	finishTexture.setSmooth(true);
 
+	// seed random now, rather than in the world initalisation.
+	srand(time(nullptr));
+
 	InitWorld(true);
 }
 
@@ -38,9 +41,27 @@ Game::~Game()
 	delete window;
 }
 
-void Game::InitWorld(bool random)
+void Game::InitWorld(const bool random, const std::string& worldFile)
 {
-	std::cout << "Loading " << (random ? "a random " : "") << "world..." << std::endl;
+	std::cout << "Loading " << (random ? "a random" : worldFile) << " world..." << std::endl;
+	
+	// World can be initalised more than once
+	// we need to kill everything that exists if there is anything that exists.
+	if (tiles.size() != 0) {
+		tiles.empty();
+	}
+
+	if (gridLines.size() != 0) {
+		gridLines.empty();
+	}
+
+	playerPosX = 0;
+	startPlayerPosX = 0;
+	playerPosY = 0;
+	startPlayerPosY = 0;
+
+	// This is where the do the loading of the world if random wasn't selected.
+	// for now, only allow random.
 
 	// Pre-determine the size of each grid cell.
 	const int gridCellSizeX = windowWidth / gridAmount;
@@ -78,34 +99,40 @@ void Game::InitWorld(bool random)
 					,(gridCellSizeY * (i + 1)) - (gridCellSizeY / 2)));
 		}
 	}
-
-	// seed random
-	srand(time(nullptr));
 	
 	// random number between 0 and max row (or max col)
-	int ranX = rand() % gridAmount;
-	int ranY = rand() % gridAmount;
+	unsigned int ranX = rand() % gridAmount;
+	unsigned int ranY = rand() % gridAmount;
 	
 	// Set the random tile to the player texture
 	tiles[ranY][ranX]->SetTileSprite(playerTexture);
+	tiles[ranY][ranX]->typeOfTile = TileType::Player;
+	// set current position and start position to the location picked.
+	playerPosX = ranX;
+	startPlayerPosX = ranX;
+	playerPosY = ranY;
+	startPlayerPosY = ranY;
 
 	// Now get new random values again to set the finish texture
-	int ranX_ = 0;
-	int ranY_ = 0;
+	unsigned int ranX_ = 9999;
+	unsigned int ranY_ = 9999;
 
 	// if ranX_ or ranY_ is 0 or the both values are the same as the player's location
 	// then reset the new locations
-	while (ranX_ == 0 || ranY_ == 0 || (ranX_ == ranX && ranY_ == ranY)) {
+	while (ranX_ == 9999 || ranY_ == 9999 || (ranX_ == ranX && ranY_ == ranY)) {
 		ranX_ = rand() % gridAmount;
 		ranY_ = rand() % gridAmount;
 	}
 
+	// Set finish point to the random location picked.
 	tiles[ranY_][ranX_]->SetTileSprite(finishTexture);
+	tiles[ranY_][ranX_]->typeOfTile = TileType::Finish;
 }
 
 void Game::render() {
 	window->clear(sf::Color::White);
 
+	// Draw all grid lines.
 	for (auto const& line : gridLines) {
 
 		const sf::Vertex tempLine[] =
@@ -118,18 +145,27 @@ void Game::render() {
 		window->draw(tempLine, 2, sf::Lines);
 	}
 
-	for (auto& column : tiles)
+	// Go through all tiles and draw their information.
+	for (auto& column : tiles) {
 		for (auto& tile : column) {
+
+			// If a tile hasn't been created correctly but placed in the vector
+			// this will pick it up.
 			if (!tile) {
-				throw std::exception("Found an invalid tile.");
+				throw std::runtime_error("Found an invalid tile.");
 			}
-			
-			window->draw(tile->sprite);
+
+			// sprites can't have an invalid texture if it has been set
+			// so we use a TileType to determine what the tile is.
+			// If it's blank, we don't draw the sprite.
+			if (tile->typeOfTile != TileType::Blank)
+				window->draw(tile->sprite);
 
 			// num text comes OVER everything else.
 			window->draw(tile->numText);
-			
+
 		}
+	}
 
 	window->display();
 }
@@ -147,9 +183,71 @@ void Game::pollEvents()
 				window->close();
 				break;
 			case sf::Event::KeyPressed:
-				if (ev.key.code == sf::Keyboard::Escape)
+				if (ev.key.code == sf::Keyboard::Escape) {
 					window->close();
-					break;
+				}
+				else if (ev.key.code == sf::Keyboard::F5) {
+					// save world
+				}
+				else if (ev.key.code == sf::Keyboard::W ||
+					ev.key.code == sf::Keyboard::S) {
+					// Process movement on Y axis.
+					// If W was pressed, move up (1), otherwise move down (-1).
+					ProcessMovement(sf::Vector2f(
+						.0f,
+						ev.key.code == sf::Keyboard::W ? 1.f : -1.f));
+				}
+				else if(ev.key.code == sf::Keyboard::A || 
+					ev.key.code == sf::Keyboard::D) {
+					// Process movement on X axis.
+					// If A was pressed, move left (-1), otherwise move right (1).
+					ProcessMovement(sf::Vector2f(
+						ev.key.code == sf::Keyboard::A ? -1.f : 1.f,
+						0.f));
+				}
+
+				break;
 		}
 	}
+}
+
+void Game::ResetGame()
+{
+	std::cout << "Resetting game." << "\n";
+	InitWorld(true);
+}
+
+void Game::ProcessMovement(const sf::Vector2f& inputValue)
+{
+	tiles[playerPosY][playerPosX]->typeOfTile = TileType::Blank;
+
+	// Only move on x/y if the value isn't 0.
+	if (inputValue.x != 0)
+		// If inputx is below 0, then - playerPosX by the value, otherwise add it.
+		playerPosX = inputValue.x < 0 ? playerPosX - std::abs(inputValue.x) : playerPosX + inputValue.x;
+
+	if (inputValue.y != 0)
+		// same as before but add the negative value (so w can be 1) and minus the positive value (so s can be -1).
+		// otherwise, w has to be -1 and s has to be 1 (which is numerically right but I like 1 = up, -1 = down.
+		// Think like Unreal's GetForwardVector and GetRightVector, this is essentially what i'm doing.
+		playerPosY = inputValue.y < 0 ? playerPosY + std::abs(inputValue.y) : playerPosY - inputValue.y;
+
+	// clamp the values so they don't go out of the array index.
+	// First we check if it's higher than the grid max, if it is then set to max y, otherwise keep the same.
+	playerPosX = playerPosX > gridAmount - 1 ? gridAmount - 1 : playerPosX;
+	// Then we want to see if the player is trying to go below 0, if so keep them at 0, otherwise keep the same.
+	playerPosX = playerPosX < 0 ? 0 : playerPosX;
+
+	// Repeat the process for the Y axis.
+	playerPosY = playerPosY > gridAmount - 1 ? gridAmount - 1 : playerPosY;
+	playerPosY = playerPosY < 0 ? 0 : playerPosY;
+
+	// do checks here for if that tile is the finish.
+
+	if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Finish) {
+		ResetGame();
+	}
+
+	tiles[playerPosY][playerPosX]->typeOfTile = TileType::Player;
+	tiles[playerPosY][playerPosX]->SetTileSprite(playerTexture);
 }

@@ -11,20 +11,35 @@ public:
 	Game();
 	virtual ~Game();
 
+#pragma region Non-Game Functions
+	
+	void render();
+	void update();
+	void pollEvents();
+
+#pragma endregion
+
+#pragma region Game Functions
+
+	void InitWorld(const bool random, const std::string& worldFile = "");
+
+	void ResetGame();
+
+	void ProcessMovement(const sf::Vector2f& inputValue);
+
 	const bool IsRunning() {
 		return this->window->isOpen();
 	}
 
-	void InitWorld(bool random);
+#pragma endregion
 
-	void render();
-	void update();
-	void pollEvents();
+#pragma region Grid Stuff
 
 	std::vector<std::unique_ptr<Line>> gridLines;
 
 	std::vector<std::vector<std::unique_ptr<Tile>>> tiles;
 
+#pragma endregion
 
 private:
 
@@ -34,6 +49,8 @@ private:
 	const unsigned int windowWidth = 1280;
 	const unsigned int windowHeight = 720;
 
+#pragma region SFML Stuff
+
 	sf::Texture playerTexture;
 	sf::Texture wallTexture;
 	sf::Texture finishTexture;
@@ -41,5 +58,10 @@ private:
 	sf::RenderWindow* window;
 	sf::Event ev;
 
+#pragma endregion
+
+	// Player Position
+	int playerPosX, playerPosY = 0;
+	int startPlayerPosX, startPlayerPosY = 0;
 
 };

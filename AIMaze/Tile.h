@@ -1,6 +1,7 @@
 #pragma once
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Graphics/Sprite.hpp>
+#include "TileType.h"
 
 class Tile
 {
@@ -12,6 +13,9 @@ public:
 	sf::Vector2f tileCentre;
 
 	sf::Font font;
+
+	// The type of tile.
+	TileType typeOfTile = TileType::Blank;
 
 	sf::Sprite sprite;
 	sf::Text numText;
