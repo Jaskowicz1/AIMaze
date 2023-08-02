@@ -1,49 +1,84 @@
-﻿  Game.cpp
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(34,12): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(51,14): warning C4858: discarding return value: This member function returns a bool indicating whether the container is empty and has no other effects. It is not useful to call this member function and discard the return value. Use the 'clear()' member function if you want to erase all elements.
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(55,18): warning C4858: discarding return value: This member function returns a bool indicating whether the container is empty and has no other effects. It is not useful to call this member function and discard the return value. Use the 'clear()' member function if you want to erase all elements.
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(73,31): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+﻿  AI.cpp
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.h(75,18): error C2065: 'AI': undeclared identifier
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.h(75,7): error C2923: 'std::unique_ptr': 'AI' is not a valid template type argument for parameter '_Ty'
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.h(75,18): message : see declaration of 'AI'
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.h(75,7): error C2976: 'std::unique_ptr': too few template arguments
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.36.32532\include\memory(3200,1): message : see declaration of 'std::unique_ptr'
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.h(75,22): error C2955: 'std::unique_ptr': use of class template requires template argument list
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.36.32532\include\memory(3200,1): message : see declaration of 'std::unique_ptr'
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.cpp(28,52): warning C4244: '=': conversion from 'float' to 'dtype', possible loss of data
+          with
+          [
+              dtype=nc::NdArray<dtype,Allocator>::index_type
+          ]
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.cpp(43,13): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+  Game.cpp
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.h(12,31): error C2065: 'Game': undeclared identifier
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.h(12,20): error C2923: 'std::unique_ptr': 'Game' is not a valid template type argument for parameter '_Ty'
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.h(12,31): message : see declaration of 'Game'
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.h(12,20): error C2976: 'std::unique_ptr': too few template arguments
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.36.32532\include\memory(3200,1): message : see declaration of 'std::unique_ptr'
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.h(12,37): error C2955: 'std::unique_ptr': use of class template requires template argument list
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.36.32532\include\memory(3200,1): message : see declaration of 'std::unique_ptr'
+C:\Users\archi\Desktop\AIMaze\AIMaze\TileReward.h(5,2): error C2365: 'Blank': redefinition; previous definition was 'enumerator'
+C:\Users\archi\Desktop\AIMaze\AIMaze\TileType.h(5,2): message : see declaration of 'Blank'
+C:\Users\archi\Desktop\AIMaze\AIMaze\TileReward.h(6,2): error C2365: 'Player': redefinition; previous definition was 'enumerator'
+C:\Users\archi\Desktop\AIMaze\AIMaze\TileType.h(6,2): message : see declaration of 'Player'
+C:\Users\archi\Desktop\AIMaze\AIMaze\TileReward.h(7,2): error C2365: 'Wall': redefinition; previous definition was 'enumerator'
+C:\Users\archi\Desktop\AIMaze\AIMaze\TileType.h(7,2): message : see declaration of 'Wall'
+C:\Users\archi\Desktop\AIMaze\AIMaze\TileReward.h(8,2): error C2365: 'Finish': redefinition; previous definition was 'enumerator'
+C:\Users\archi\Desktop\AIMaze\AIMaze\TileType.h(8,2): message : see declaration of 'Finish'
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(52,10): warning C4834: discarding return value of function with 'nodiscard' attribute
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(67,14): warning C4858: discarding return value: This member function returns a bool indicating whether the container is empty and has no other effects. It is not useful to call this member function and discard the return value. Use the 'clear()' member function if you want to erase all elements.
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(71,18): warning C4858: discarding return value: This member function returns a bool indicating whether the container is empty and has no other effects. It is not useful to call this member function and discard the return value. Use the 'clear()' member function if you want to erase all elements.
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(94,42): warning C4244: 'argument': conversion from 'const unsigned int' to 'T', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(74,42): warning C4244: 'argument': conversion from 'const unsigned int' to 'T', possible loss of data
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(94,31): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(74,31): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(93,31): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(80,34): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(101,44): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(81,44): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(101,17): warning C4244: 'argument': conversion from 'const unsigned int' to 'T', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(81,17): warning C4244: 'argument': conversion from 'const unsigned int' to 'T', possible loss of data
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(100,34): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(99,33): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(119,33): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(98,42): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(118,42): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(227,29): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
-C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(233,29): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(255,29): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
+C:\Users\archi\Desktop\AIMaze\AIMaze\Game.cpp(261,29): warning C4244: '=': conversion from 'float' to 'int', possible loss of data
   main.cpp
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.h(12,31): error C2065: 'Game': undeclared identifier
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.h(12,20): error C2923: 'std::unique_ptr': 'Game' is not a valid template type argument for parameter '_Ty'
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.h(12,31): message : see declaration of 'Game'
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.h(12,20): error C2976: 'std::unique_ptr': too few template arguments
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.36.32532\include\memory(3200,1): message : see declaration of 'std::unique_ptr'
+C:\Users\archi\Desktop\AIMaze\AIMaze\AI.h(12,37): error C2955: 'std::unique_ptr': use of class template requires template argument list
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.36.32532\include\memory(3200,1): message : see declaration of 'std::unique_ptr'
   Generating Code...
-  AIMaze.vcxproj -> C:\Users\archi\Desktop\AIMaze\x64\Debug\AIMaze.exe

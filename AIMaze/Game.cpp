@@ -10,18 +10,21 @@ Game::Game() {
 
 	if (!playerTexture.loadFromFile("Player.png"))
 	{
+		std::cout << "Failed to load Player image.";
 		throw std::exception("Failed to load Player image.");
 		return;
 	}
 
 	if (!wallTexture.loadFromFile("Wall.png"))
 	{
+		std::cout << "Failed to load Wall image.";
 		throw std::exception("Failed to load Wall image.");
 		return;
 	}
 
 	if (!finishTexture.loadFromFile("Finish.png"))
 	{
+		std::cout << "Failed to load Finish image.";
 		throw std::exception("Failed to load Finish image.");
 		return;
 	}
@@ -30,10 +33,11 @@ Game::Game() {
 	wallTexture.setSmooth(true);
 	finishTexture.setSmooth(true);
 
-	// seed random now, rather than in the world initalisation.
-	srand(time(nullptr));
-
 	InitWorld(true);
+
+	aiRef = std::make_unique<AI>(gridAmount);
+	
+	aiRef->TrainAI(this);
 }
 
 Game::~Game()
@@ -59,6 +63,10 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 	startPlayerPosX = 0;
 	playerPosY = 0;
 	startPlayerPosY = 0;
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> distrib(0, gridAmount - 1);
 
 	// This is where the do the loading of the world if random wasn't selected.
 	// for now, only allow random.
@@ -99,10 +107,10 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 					,(gridCellSizeY * (i + 1)) - (gridCellSizeY / 2)));
 		}
 	}
-	
+
 	// random number between 0 and max row (or max col)
-	unsigned int ranX = rand() % gridAmount;
-	unsigned int ranY = rand() % gridAmount;
+	unsigned int ranX = distrib(gen);
+	unsigned int ranY = distrib(gen);
 	
 	// Set the random tile to the player texture
 	tiles[ranY][ranX]->SetTileSprite(playerTexture);
@@ -120,8 +128,8 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 	// if ranX_ or ranY_ is 0 or the both values are the same as the player's location
 	// then reset the new locations
 	while (ranX_ == 9999 || ranY_ == 9999 || (ranX_ == ranX && ranY_ == ranY)) {
-		ranX_ = rand() % gridAmount;
-		ranY_ = rand() % gridAmount;
+		ranX_ = distrib(gen);
+		ranY_ = distrib(gen);
 	}
 
 	// Set finish point to the random location picked.
@@ -152,6 +160,7 @@ void Game::render() {
 			// If a tile hasn't been created correctly but placed in the vector
 			// this will pick it up.
 			if (!tile) {
+				std::cout << "Invalid tile.";
 				throw std::runtime_error("Found an invalid tile.");
 			}
 
@@ -193,7 +202,7 @@ void Game::pollEvents()
 					ev.key.code == sf::Keyboard::S) {
 					// Process movement on Y axis.
 					// If W was pressed, move up (1), otherwise move down (-1).
-					ProcessMovement(sf::Vector2f(
+					ProcessPlayerMovement(sf::Vector2f(
 						.0f,
 						ev.key.code == sf::Keyboard::W ? 1.f : -1.f));
 				}
@@ -201,7 +210,7 @@ void Game::pollEvents()
 					ev.key.code == sf::Keyboard::D) {
 					// Process movement on X axis.
 					// If A was pressed, move left (-1), otherwise move right (1).
-					ProcessMovement(sf::Vector2f(
+					ProcessPlayerMovement(sf::Vector2f(
 						ev.key.code == sf::Keyboard::A ? -1.f : 1.f,
 						0.f));
 				}
@@ -211,13 +220,21 @@ void Game::pollEvents()
 	}
 }
 
-void Game::ResetGame()
+void Game::ResetGame(bool newWorld)
 {
-	std::cout << "Resetting game." << "\n";
-	InitWorld(true);
+	//std::cout << "Resetting game." << "\n";
+
+	if (newWorld) {
+		InitWorld(true);
+	}
+
+	playerPosX = startPlayerPosX;
+	playerPosY = startPlayerPosY;
+
+	return;
 }
 
-void Game::ProcessMovement(const sf::Vector2f& inputValue)
+void Game::ProcessPlayerMovement(const sf::Vector2f& inputValue)
 {
 	tiles[playerPosY][playerPosX]->typeOfTile = TileType::Blank;
 
@@ -232,6 +249,56 @@ void Game::ProcessMovement(const sf::Vector2f& inputValue)
 		// Think like Unreal's GetForwardVector and GetRightVector, this is essentially what i'm doing.
 		playerPosY = inputValue.y < 0 ? playerPosY + std::abs(inputValue.y) : playerPosY - inputValue.y;
 
+	ClampPlayerPosition();
+
+	// do checks here for if that tile is the finish.
+
+	UpdatePlayerTile(false);
+}
+
+std::vector<float> Game::ProcessAiMovement(const int action)
+{
+	std::vector<float> values;
+
+	// ACTION VALUE KEY:
+	// 0 = Up
+	// 1 = Down
+	// 2 = Left
+	// 3 = Right.
+
+	// if action is 0 or 1.
+	if (action == 0 || action == 1) {
+		playerPosY = action == 0 ? playerPosY - 1 : playerPosY + 1;
+	}
+	else {
+		playerPosX = action == 2 ? playerPosX - 1 : playerPosX + 1;
+	}
+
+	//std::cout << "NEW PLAYER LOC: " << playerPosX << "," << playerPosY << "\n";
+
+	ClampPlayerPosition();
+
+	//std::cout << "CLAMPED PLAYER LOC: " << playerPosX << "," << playerPosY << "\n";
+
+	if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Wall) {
+		values.push_back(-9999.f); // Reward
+		values.push_back(0.f); // completed (0 = false, 1 = true);
+	} else if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Finish) {
+		values.push_back(9999.f);
+		values.push_back(1.f);
+	} else
+	{
+		values.push_back(0.f);
+		values.push_back(0.f);
+	}
+
+	UpdatePlayerTile(true);
+
+	return values;
+}
+
+void Game::ClampPlayerPosition()
+{
 	// clamp the values so they don't go out of the array index.
 	// First we check if it's higher than the grid max, if it is then set to max y, otherwise keep the same.
 	playerPosX = playerPosX > gridAmount - 1 ? gridAmount - 1 : playerPosX;
@@ -241,13 +308,26 @@ void Game::ProcessMovement(const sf::Vector2f& inputValue)
 	// Repeat the process for the Y axis.
 	playerPosY = playerPosY > gridAmount - 1 ? gridAmount - 1 : playerPosY;
 	playerPosY = playerPosY < 0 ? 0 : playerPosY;
+}
 
-	// do checks here for if that tile is the finish.
+void Game::UpdatePlayerTile(bool ai)
+{
 
 	if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Finish) {
-		ResetGame();
+		ResetGame(!ai);
 	}
 
 	tiles[playerPosY][playerPosX]->typeOfTile = TileType::Player;
 	tiles[playerPosY][playerPosX]->SetTileSprite(playerTexture);
+}
+
+void Game::UpdateAllTileText()
+{
+	for(auto& col : tiles)
+	{
+		for(auto& tile : col)
+		{
+			tile->numText.setString(std::to_string(aiRef->QTable[playerPosX * playerPosY - 1]));
+		}
+	}
 }

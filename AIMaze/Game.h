@@ -3,6 +3,7 @@
 #include "SFML/Graphics.hpp"
 #include "Line.h"
 #include "Tile.h"
+#include "AI.h"
 
 class Game {
 
@@ -23,9 +24,11 @@ public:
 
 	void InitWorld(const bool random, const std::string& worldFile = "");
 
-	void ResetGame();
+	void ResetGame(bool newWorld);
 
-	void ProcessMovement(const sf::Vector2f& inputValue);
+	void ProcessPlayerMovement(const sf::Vector2f& inputValue);
+
+	std::vector<float> ProcessAiMovement(const int action);
 
 	const bool IsRunning() {
 		return this->window->isOpen();
@@ -39,7 +42,12 @@ public:
 
 	std::vector<std::vector<std::unique_ptr<Tile>>> tiles;
 
+	int playerPosX, playerPosY = 0;
+
 #pragma endregion
+
+	std::unique_ptr<AI> aiRef;
+	std::thread aiThread;
 
 private:
 
@@ -60,8 +68,13 @@ private:
 
 #pragma endregion
 
-	// Player Position
-	int playerPosX, playerPosY = 0;
+	void ClampPlayerPosition();
+
+	void UpdatePlayerTile(bool ai);
+
+	void UpdateAllTileText();
+
+	// Player Start Positions
 	int startPlayerPosX, startPlayerPosY = 0;
 
 };
