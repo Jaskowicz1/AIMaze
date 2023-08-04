@@ -1,6 +1,5 @@
 #include "AI.h"
 
-#include <stdlib.h> 
 #include "Game.h"
 
 AI::AI(const int sizeOfBoard, const bool loadQTable)
@@ -32,6 +31,11 @@ AI::AI(const int sizeOfBoard, const bool loadQTable)
 			col++;
 		}
 
+		//MazeTableFile.close();
+
+		//boost::detail::Sleep(1000);
+		
+		
 		std::cout << "Loaded Q-Table!" << "\n";
 	}
 
@@ -39,7 +43,7 @@ AI::AI(const int sizeOfBoard, const bool loadQTable)
 
 	isTrainable = !loadQTable;
 
-	std::cout << QTable << "\n";
+	//std::cout << QTable << "\n";
 
 	if(loadQTable)
 		std::cout << "Since a Q-Table has been loaded, the AI will NOT be able to train." << "\n";
@@ -128,7 +132,7 @@ void AI::TrainingFunc(Game* gameRef)
 			const int newTileID = gameRef->tiles[newPlayerRow][newPlayerCol]->GetTileID();
 
 			// Update the QTable with the new value from the current action.
-			QTable(currentTileID, action) = QTable(currentTileID, action) + learning_rate * (reward + gamma * nc::max(QTable.row(newTileID))[0] - QTable(currentTileID, action));
+			QTable(currentTileID, action) = QTable(currentTileID, action) + learning_rate * (reward + (gamma * nc::max(QTable.row(newTileID))[0]) - QTable(currentTileID, action));
 
 			// Tell the game that the AI has finished movement and calculations.
 			gameRef->FinishedAIUpdate();
@@ -157,13 +161,16 @@ void AI::TrainingFunc(Game* gameRef)
 void AI::DoCompletedPath(Game* gameRef)
 {
 	bool finished = false;
+
+	std::cout << "Proceeding to follow the complete path." << "\n";
 	
 	while(!finished)
 	{
 		const int playerRow = gameRef->playerPosY;
 		const int playerCol = gameRef->playerPosX;
+		const int tileID = gameRef->tiles[playerRow][playerCol]->GetTileID();
 		
-		int action = GreedyPolicy(gameRef->tiles[playerRow][playerCol]->GetTileID());
+		int action = GreedyPolicy(tileID);
 
 		// Get information from the move we just did.
 		// Would be better to use a class to hand over the information for this rather than a std::vector but
@@ -186,9 +193,11 @@ void AI::DoCompletedPath(Game* gameRef)
 		// So the user can actually see the AI move properly.
 		boost::detail::Sleep(500);
 	}
+
+	std::cout << "The AI has reached the end!" << "\n";
 }
 
-int AI::EpsilonGreedyPolicy(int rowNum)
+int AI::EpsilonGreedyPolicy(const int rowNum)
 {
 	int ranNum = RandomNum();
 

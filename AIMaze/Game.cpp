@@ -43,10 +43,29 @@ void Game::Initiate()
 {
 	InitWorld(true);
 
+	render();
+
+	char input;
+
 	bool useSavedTable = false;
 
-	aiRef = std::make_unique<AI>(gridAmount, useSavedTable);
+	std::cout << "Do you wish to train the AI? No (N/n) will result in the AI playing its known Q-Table. (Y/n)" << "\n";
 
+	std::cin >> input;
+
+	if(input == 'N' || input == 'n')
+	{
+		std::cout << "Understood. Will not train the AI." << "\n";
+		useSavedTable = true;
+		
+	} else if (input != 'Y' && input != 'y')
+	{
+		std::cout << "Did not understand input. Assuming no." << "\n";
+		useSavedTable = true;
+	}
+
+	aiRef = std::make_unique<AI>(gridAmount, useSavedTable);
+	
 	if(!useSavedTable)
 	{
 		std::cout << "Attempting to train AI..." << "\n";
@@ -60,7 +79,7 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 {
 	std::cout << "Loading " << (random ? "a random" : worldFile) << " world..." << std::endl;
 	
-	// World can be initalised more than once
+	// World can be initialised more than once
 	// we need to kill everything that exists if there is anything that exists.
 	if (tiles.size() != 0) {
 		tiles.empty();
@@ -75,6 +94,8 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 	playerPosY = 0;
 	startPlayerPosY = 0;
 
+	// Allow a seed, this means we don't have to "save" the world
+	// as the same seed will give the same world.
 	std::default_random_engine generator( 556555 );
 	//std::random_device rd;
 	std::mt19937 gen(generator());
@@ -84,8 +105,8 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 	// for now, only allow random.
 
 	// Pre-determine the size of each grid cell.
-	const int gridCellSizeX = windowWidth / gridAmount;
-	const int gridCellSizeY = windowHeight / gridAmount;
+	const float gridCellSizeX = windowWidth / gridAmount;
+	const float gridCellSizeY = windowHeight / gridAmount;
 
 	// if grid is 4x4, we make 3 lines on the x axis.
 	for (int i = 0; i <= gridAmount - 1; i++) {
@@ -124,40 +145,49 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 	}
 
 	// random number between 0 and max row (or max col)
-	unsigned int ranPlayerX = distrib(gen);
-	unsigned int ranPlayerY = distrib(gen);
+	playerPosX = distrib(gen);
+	playerPosY = distrib(gen);
 	
 	// Set the random tile to the player texture
-	tiles[ranPlayerY][ranPlayerX]->SetTileSprite(playerTexture);
-	tiles[ranPlayerY][ranPlayerX]->typeOfTile = TileType::Player;
+	tiles[playerPosY][playerPosX]->SetTileSprite(playerTexture);
+	tiles[playerPosY][playerPosX]->typeOfTile = TileType::Player;
+	
 	// set current position and start position to the location picked.
-	playerPosX = ranPlayerX;
-	startPlayerPosX = ranPlayerX;
-	playerPosY = ranPlayerY;
-	startPlayerPosY = ranPlayerY;
+	startPlayerPosX = playerPosX;
+	startPlayerPosY = playerPosY;
+
+	std::cout << "Created the player and set starting position..." << "\n";
 
 	// Now get new random values again to set the finish texture
-	unsigned int ranFinishX = 9999;
-	unsigned int ranFinishY = 9999;
+
+	finishPosX = 9999;
+	finishPosY = 9999;
 
 	// if ranX_ or ranY_ is 0 or the both values are the same as the player's location
 	// then reset the new locations
-	while (ranFinishX == 9999 || ranFinishY == 9999 || (ranFinishX == ranPlayerX && ranFinishY == ranPlayerY)) {
-		ranFinishX = distrib(gen);
-		ranFinishY = distrib(gen);
+	while (finishPosX == 9999 || finishPosY == 9999 || (finishPosX == playerPosX && finishPosY == playerPosY)) {
+		finishPosX = distrib(gen);
+		finishPosY = distrib(gen);
 	}
 
+	std::cout << "FINISH: " << finishPosX << ", " << finishPosY << "\n";
+	
 	// Set finish point to the random location picked.
-	tiles[ranFinishY][ranFinishX]->SetTileSprite(finishTexture);
-	tiles[ranFinishY][ranFinishX]->typeOfTile = TileType::Finish;
+	tiles[finishPosY][finishPosX]->SetTileSprite(finishTexture);
+	tiles[finishPosY][finishPosX]->typeOfTile = TileType::Finish;
+
+	std::cout << "Created the finish and set finish position..." << "\n";
+
+	// Set the distance between the player and the finish for the AI.
+	lastDistance = std::abs(playerPosX - finishPosX) + std::abs(playerPosY - finishPosY);
 
 	for(int i=0; i<=amountOfWalls-1; i++)
 	{
-		unsigned int ranWallX = 9999;
-		unsigned int ranWallY = 9999;
+		int ranWallX = 9999;
+		int ranWallY = 9999;
 
-		while (ranWallX == 9999 || ranWallY == 9999 || (ranWallX == ranPlayerX && ranWallY == ranPlayerY)
-			|| (ranWallX == ranFinishX && ranWallY == ranFinishY)) {
+		while (ranWallX == 9999 || ranWallY == 9999 || (ranWallX == playerPosX && ranWallY == playerPosY)
+			|| (ranWallX == finishPosX && ranWallY == finishPosY)) {
 			ranWallX = distrib(gen);
 			ranWallY = distrib(gen);
 		}
@@ -166,6 +196,8 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 		tiles[ranWallY][ranWallX]->SetTileSprite(wallTexture);
 		tiles[ranWallY][ranWallX]->typeOfTile = TileType::Wall;
 	}
+
+	std::cout << "Created a random world!" << "\n";
 }
 
 void Game::render()
@@ -214,15 +246,12 @@ void Game::pollEvents()
 {
 	while (window->pollEvent(ev)) {
 		switch (ev.type) {
-			case sf::Event::Closed:
-				window->close();
-				break;
+			//case sf::Event::Closed:
+				//window->close();
+				//break;
 			case sf::Event::KeyPressed:
 				if (ev.key.code == sf::Keyboard::Escape) {
 					window->close();
-				}
-				else if (ev.key.code == sf::Keyboard::F5) {
-					// save world
 				}
 				else if (ev.key.code == sf::Keyboard::W ||
 					ev.key.code == sf::Keyboard::S) {
@@ -289,6 +318,9 @@ std::vector<float> Game::ProcessAiMovement(const int action)
 
 	tiles[playerPosY][playerPosX]->typeOfTile = TileType::Blank;
 
+	int lastPosX = playerPosX;
+	int lastPosY = playerPosY;
+
 	// ACTION VALUE KEY:
 	// 0 = Up
 	// 1 = Down
@@ -297,24 +329,68 @@ std::vector<float> Game::ProcessAiMovement(const int action)
 
 	// if action is 0 or 1.
 	if (action == 0 || action == 1) {
+		// if 0, go up (decrease y by 1). Otherwise, go down (increase y by 1).
 		playerPosY = action == 0 ? playerPosY - 1 : playerPosY + 1;
 	}
 	else {
+		// If 2, go left (decrease x by 1). Otherwise, go right (increase x by 1).
 		playerPosX = action == 2 ? playerPosX - 1 : playerPosX + 1;
 	}
 
 	ClampPlayerPosition();
 
-	if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Wall) {
-		values.push_back(0.f); // Reward
-		values.push_back(1.f); // completed (0 = false, 1 = true);
-	} else if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Finish) {
-		values.push_back(9999.f);
-		values.push_back(1.f);
+	float reward = 0.f;
+
+	int distance = std::abs(playerPosX - finishPosX) + std::abs(playerPosY - finishPosY);
+
+	// Calculate the distance to the finish with the new player position.
+	// if the last distance was smaller than the the new distance, we've gone the wrong way.
+	if(distance > lastDistance)
+	{
+		// We now give a negative reward.
+		// We also increase how negative the reward was, depending on how far away we've gone.
+		// this will mean that tiles further away are given worse numbers than tiles closer.
+		reward -= (50.f + distance);
+	} else if(distance < lastDistance) // if the last distance is bigger, we moved closer to the finish.
+	{
+		// We now give a positive reward
+		// we increase the reward by how close we are to the finish. The closer we are, the bigger the reward.
+		// This should tell the AI that it's getting closer and closer rather than just saying "right step, wrong step".
+		reward += (10.f + distance);
+	} else if(distance == lastDistance) // if we didn't get any closer (stayed in the same space) then that's bad.
+	{
+		// We give a negative reward for this, more severe than anything else.
+		// This is because the AI should be encouraged to still try random ways, but should not be encouraged to go
+		// into the maze's actual walls.
+		reward -= 9999.f;
+	}
+
+	lastDistance = distance;
+
+	if(lastPosX == playerPosX && lastPosY == playerPosY)
+	{
+		// we stayed the same place, make sure the AI KNOWS that was a bad move.
+		reward -= 9999.f;
+		values.push_back(reward);
+		values.push_back(0.f);
 	} else
 	{
-		values.push_back(10.f);
-		values.push_back(0.f);
+		if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Wall) {
+			// We do not want to reward a negative value for hitting a wall. Whilst its bad, it'll make the tile before
+			// show as really bad, this means we should just leave it as zero.
+			//reward -= 999.f;
+			values.push_back(reward); // Reward
+			values.push_back(1.f); // completed (0 = false, 1 = true);
+		} else if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Finish) {
+			reward += 9999.f;
+			values.push_back(reward);
+			values.push_back(1.f);
+		} else
+		{
+			// No reward for a blank tile, but the AI will get an award for moving closer (if they did).
+			values.push_back(reward);
+			values.push_back(0.f);
+		}
 	}
 
 	return values;
@@ -336,7 +412,7 @@ void Game::ClampPlayerPosition()
 void Game::UpdatePlayerTile(bool ai)
 {
 	if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Finish || tiles[playerPosY][playerPosX]->typeOfTile == TileType::Wall) {
-		ResetGame(!ai);
+		//ResetGame(!ai);
 	}
 
 	tiles[playerPosY][playerPosX]->typeOfTile = TileType::Player;

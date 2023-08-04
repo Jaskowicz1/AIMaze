@@ -49,7 +49,15 @@ public:
 
 	std::vector<std::vector<std::unique_ptr<Tile>>> tiles;
 
-	int playerPosX, playerPosY = 0;
+	// Player Positions
+	int playerPosX = 9999;
+	int playerPosY = 9999;
+	
+	// Finish Positions
+	int finishPosX = 9999;
+	int finishPosY = 9999;
+
+	int lastDistance = 0;
 
 #pragma endregion
 
