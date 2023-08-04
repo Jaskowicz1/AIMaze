@@ -3,78 +3,188 @@
 #include <stdlib.h> 
 #include "Game.h"
 
-AI::AI(const int sizeOfBoard)
+AI::AI(const int sizeOfBoard, const bool loadQTable)
 {
-	QTable = nc::zeros<int>(sizeOfBoard, possibleActions);
+	QTable = nc::zeros<int>(sizeOfBoard * sizeOfBoard, possibleActions);
+	
+	if(loadQTable)
+	{
+		std::ifstream MazeTableFile("CompletedMazeTable.txt");
+		std::string qtableLine;
 
-	std::cout << "AI is alive and has created a Q-Table." << "\n";
+		int row = 0;
+		int col = 0;
+
+		std::cout << "Loading Q-Table..." << "\n";
+		
+		while (std::getline(MazeTableFile, qtableLine))
+		{
+			std::cout << std::stoi(qtableLine) << "\n";
+			
+			QTable(row, col) = std::stoi(qtableLine);
+
+			if(col % (sizeOfBoard - 1) == 0)
+			{
+				row++;
+				col = 0;
+			}
+
+			col++;
+		}
+
+		std::cout << "Loaded Q-Table!" << "\n";
+	}
+
+	std::cout << "AI is alive and has " << (loadQTable ? "loaded the saved " : "generated a ") << " Q-Table." << "\n";
+
+	isTrainable = !loadQTable;
+
+	std::cout << QTable << "\n";
+
+	if(loadQTable)
+		std::cout << "Since a Q-Table has been loaded, the AI will NOT be able to train." << "\n";
 }
 
 void AI::TrainAI(Game* gameRef)
 {
-	//std::thread thread_object(&AI::TrainAI,);
+	if(!isTrainable)
+	{
+		std::cout << "The AI is not trainable since it has loaded a Q-Table." << "\n";
+		return;
+	}
+	
 	TrainingFunc(gameRef);
 }
 
 void AI::TrainingFunc(Game* gameRef)
 {
 	std::cout << "Training has begun." << "\n";
+
+	std::ifstream qtableSaved("CompletedMazeTable.txt");
+
+	if (qtableSaved.good())
+	{
+		char input;
+		
+		std::cout << "A saved QTable already exists and will be overwritten. Are you sure you want to continue? (Y/n)" << "\n";
+
+		std::cin >> input;
+
+		if(input == 'N' || input == 'n')
+		{
+			std::cout << "Understood. Stopping AI." << "\n";
+			return;
+		} else if (input != 'Y' && input != 'y')
+		{
+			std::cout << "Did not understand input. Assuming no." << "\n";
+			return;
+		}
+
+		qtableSaved.clear();
+	}
 	
 	for (int i = 0; i <= n_training_episodes - 1; i++) {
 
-		std::cout << "Episode: " << i << " / " << n_training_episodes << "\n";
-		
+		// Call update so we can poll events (other wise the window shows as "not responding").
+		gameRef->update();
+		// Render as well because rendering in on same thread as training.
+		// this does slow down training but it's fine.
+		gameRef->render();
+
+		std::cout << "Training episode: " << i << "/" << n_training_episodes << "\n";
+
+		// Calculate epsilon.
 		epsilon = min_epsilon + (max_epsilon - min_epsilon) * nc::exp(-decay_rate * i);
 
-		std::cout << "epsilon: " << epsilon << " / " << max_epsilon << "\n";
-
+		// Keep references to player position and tile as we don't want it to reset every loop.
 		int playerRow = gameRef->playerPosY;
+		int playerCol = gameRef->playerPosX;
+		int currentTileID = gameRef->tiles[playerRow][playerCol]->GetTileID();
 
 		for (int j = 0; j <= max_steps - 1; j++) {
 
-			//std::cout << "Step: " << j << " / " << max_steps << "\n";
+			// Calculate what action we should do.
+			int action = EpsilonGreedyPolicy(gameRef->tiles[playerRow][playerCol]->GetTileID());
 
-			int action = EpsilonGreedyPolicy(playerRow);
-
-			//std::cout << "Action = " << action << "\n";
-			
+			// Get information from the move we just did.
+			// Would be better to use a class to hand over the information for this rather than a std::vector but
+			// it works for now (just maybe not the best way to do it).
 			std::vector<float> info = gameRef->ProcessAiMovement(action);
-
-			//std::cout << "Processed movement! " << "\n";
 
 			float reward = 0;
 			bool finished = false;
 
-			if(info.empty())
-			{
-				std::cout << "Info is empty!" << "\n";
-				std::cout << "Continuing under assumption that reward is 0 and not finished!" << "\n";
-			} else
+			// Make sure that info isn't empty.
+			if(!info.empty())
 			{
 				reward = info[0];
 				finished = info[1] == 1;
 			}
 
-			//std::cout << "Got values! " << "\n";
+			// Get a reference to the new positions (these are allowed to reset every loop, hence why they are here
+			// and also const.
+			const int newPlayerRow = gameRef->playerPosY;
+			const int newPlayerCol = gameRef->playerPosX;
+			const int newTileID = gameRef->tiles[newPlayerRow][newPlayerCol]->GetTileID();
 
-			int newPlayerRow = gameRef->playerPosY;
+			// Update the QTable with the new value from the current action.
+			QTable(currentTileID, action) = QTable(currentTileID, action) + learning_rate * (reward + gamma * nc::max(QTable.row(newTileID))[0] - QTable(currentTileID, action));
 
-			//std::cout << "I'm about to update QTable! " << "\n";
+			// Tell the game that the AI has finished movement and calculations.
+			gameRef->FinishedAIUpdate();
 
-			QTable.row(playerRow)[action] = QTable.row(playerRow)[action] + learning_rate
-				* (reward + gamma * nc::max(QTable.row(newPlayerRow))[0]
-					- QTable.row(playerRow)[action]);
+			playerRow = newPlayerRow;
+			playerCol = newPlayerCol;
+			currentTileID = gameRef->tiles[playerRow][playerCol]->GetTileID();
 
-			//std::cout << "Updated QTable! " << "\n";
+			// Do update and render AGAIN because we've done movement.
+			gameRef->update();
+			gameRef->render();
 
+			// If the AI finished the game, move on to the next 
 			if (finished)
 				break;
 
-			playerRow = newPlayerRow;
-			//playerPosition = newPlayerPosition;
-
-			//std::cout << "Set playerRow and playerPosition." << "\n";
+			//boost::detail::Sleep(500);
 		}
+	}
+
+	std::cout << "Dumping QTable to 'CompletedMazeTable.txt'!" << "\n";
+	std::cout << QTable << "\n";
+	QTable.tofile("CompletedMazeTable.txt", '\n');
+}
+
+void AI::DoCompletedPath(Game* gameRef)
+{
+	bool finished = false;
+	
+	while(!finished)
+	{
+		const int playerRow = gameRef->playerPosY;
+		const int playerCol = gameRef->playerPosX;
+		
+		int action = GreedyPolicy(gameRef->tiles[playerRow][playerCol]->GetTileID());
+
+		// Get information from the move we just did.
+		// Would be better to use a class to hand over the information for this rather than a std::vector but
+		// it works for now (just maybe not the best way to do it).
+		std::vector<float> info = gameRef->ProcessAiMovement(action);
+
+		// Make sure that info isn't empty.
+		if(!info.empty())
+		{
+			finished = info[1] == 1;
+		}
+
+		// Tell the game that the AI has finished movement and calculations.
+		gameRef->FinishedAIUpdate();
+
+		// Do update and render AGAIN because we've done movement.
+		gameRef->update();
+		gameRef->render();
+
+		// So the user can actually see the AI move properly.
+		boost::detail::Sleep(500);
 	}
 }
 

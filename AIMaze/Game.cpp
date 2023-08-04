@@ -32,17 +32,28 @@ Game::Game() {
 	playerTexture.setSmooth(true);
 	wallTexture.setSmooth(true);
 	finishTexture.setSmooth(true);
-
-	InitWorld(true);
-
-	aiRef = std::make_unique<AI>(gridAmount);
-	
-	aiRef->TrainAI(this);
 }
 
 Game::~Game()
 {
 	delete window;
+}
+
+void Game::Initiate()
+{
+	InitWorld(true);
+
+	bool useSavedTable = false;
+
+	aiRef = std::make_unique<AI>(gridAmount, useSavedTable);
+
+	if(!useSavedTable)
+	{
+		std::cout << "Attempting to train AI..." << "\n";
+		aiRef->TrainAI(this);
+	}
+	else
+		aiRef->DoCompletedPath(this);
 }
 
 void Game::InitWorld(const bool random, const std::string& worldFile)
@@ -64,8 +75,9 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 	playerPosY = 0;
 	startPlayerPosY = 0;
 
-	std::random_device rd;
-	std::mt19937 gen(rd());
+	std::default_random_engine generator( 556555 );
+	//std::random_device rd;
+	std::mt19937 gen(generator());
 	std::uniform_int_distribution<> distrib(0, gridAmount - 1);
 
 	// This is where the do the loading of the world if random wasn't selected.
@@ -95,6 +107,8 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 	for (auto& column : tiles)
 		column.resize(gridAmount);
 
+	int tileID = 0;
+
 	// Now we make tiles for all the grid slots.
 	// the first loop is the rows.
 	for (int i = 0; i <= gridAmount - 1; i++) {
@@ -104,40 +118,58 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 
 			tiles[i][j] = std::make_unique<Tile>(
 				sf::Vector2f((gridCellSizeX * (j+1)) - (gridCellSizeX / 2)
-					,(gridCellSizeY * (i + 1)) - (gridCellSizeY / 2)));
+					,(gridCellSizeY * (i + 1)) - (gridCellSizeY / 2)), tileID);
+			tileID++;
 		}
 	}
 
 	// random number between 0 and max row (or max col)
-	unsigned int ranX = distrib(gen);
-	unsigned int ranY = distrib(gen);
+	unsigned int ranPlayerX = distrib(gen);
+	unsigned int ranPlayerY = distrib(gen);
 	
 	// Set the random tile to the player texture
-	tiles[ranY][ranX]->SetTileSprite(playerTexture);
-	tiles[ranY][ranX]->typeOfTile = TileType::Player;
+	tiles[ranPlayerY][ranPlayerX]->SetTileSprite(playerTexture);
+	tiles[ranPlayerY][ranPlayerX]->typeOfTile = TileType::Player;
 	// set current position and start position to the location picked.
-	playerPosX = ranX;
-	startPlayerPosX = ranX;
-	playerPosY = ranY;
-	startPlayerPosY = ranY;
+	playerPosX = ranPlayerX;
+	startPlayerPosX = ranPlayerX;
+	playerPosY = ranPlayerY;
+	startPlayerPosY = ranPlayerY;
 
 	// Now get new random values again to set the finish texture
-	unsigned int ranX_ = 9999;
-	unsigned int ranY_ = 9999;
+	unsigned int ranFinishX = 9999;
+	unsigned int ranFinishY = 9999;
 
 	// if ranX_ or ranY_ is 0 or the both values are the same as the player's location
 	// then reset the new locations
-	while (ranX_ == 9999 || ranY_ == 9999 || (ranX_ == ranX && ranY_ == ranY)) {
-		ranX_ = distrib(gen);
-		ranY_ = distrib(gen);
+	while (ranFinishX == 9999 || ranFinishY == 9999 || (ranFinishX == ranPlayerX && ranFinishY == ranPlayerY)) {
+		ranFinishX = distrib(gen);
+		ranFinishY = distrib(gen);
 	}
 
 	// Set finish point to the random location picked.
-	tiles[ranY_][ranX_]->SetTileSprite(finishTexture);
-	tiles[ranY_][ranX_]->typeOfTile = TileType::Finish;
+	tiles[ranFinishY][ranFinishX]->SetTileSprite(finishTexture);
+	tiles[ranFinishY][ranFinishX]->typeOfTile = TileType::Finish;
+
+	for(int i=0; i<=amountOfWalls-1; i++)
+	{
+		unsigned int ranWallX = 9999;
+		unsigned int ranWallY = 9999;
+
+		while (ranWallX == 9999 || ranWallY == 9999 || (ranWallX == ranPlayerX && ranWallY == ranPlayerY)
+			|| (ranWallX == ranFinishX && ranWallY == ranFinishY)) {
+			ranWallX = distrib(gen);
+			ranWallY = distrib(gen);
+		}
+
+		// Set finish point to the random location picked.
+		tiles[ranWallY][ranWallX]->SetTileSprite(wallTexture);
+		tiles[ranWallY][ranWallX]->typeOfTile = TileType::Wall;
+	}
 }
 
-void Game::render() {
+void Game::render()
+{
 	window->clear(sf::Color::White);
 
 	// Draw all grid lines.
@@ -154,25 +186,19 @@ void Game::render() {
 	}
 
 	// Go through all tiles and draw their information.
-	for (auto& column : tiles) {
-		for (auto& tile : column) {
+	for (auto const& column : tiles) {
+		for (auto const& tile : column) {
 
 			// If a tile hasn't been created correctly but placed in the vector
 			// this will pick it up.
-			if (!tile) {
-				std::cout << "Invalid tile.";
-				throw std::runtime_error("Found an invalid tile.");
-			}
+			if (!tile)
+				continue;
 
 			// sprites can't have an invalid texture if it has been set
 			// so we use a TileType to determine what the tile is.
 			// If it's blank, we don't draw the sprite.
 			if (tile->typeOfTile != TileType::Blank)
 				window->draw(tile->sprite);
-
-			// num text comes OVER everything else.
-			window->draw(tile->numText);
-
 		}
 	}
 
@@ -258,7 +284,10 @@ void Game::ProcessPlayerMovement(const sf::Vector2f& inputValue)
 
 std::vector<float> Game::ProcessAiMovement(const int action)
 {
+	
 	std::vector<float> values;
+
+	tiles[playerPosY][playerPosX]->typeOfTile = TileType::Blank;
 
 	// ACTION VALUE KEY:
 	// 0 = Up
@@ -274,25 +303,19 @@ std::vector<float> Game::ProcessAiMovement(const int action)
 		playerPosX = action == 2 ? playerPosX - 1 : playerPosX + 1;
 	}
 
-	//std::cout << "NEW PLAYER LOC: " << playerPosX << "," << playerPosY << "\n";
-
 	ClampPlayerPosition();
 
-	//std::cout << "CLAMPED PLAYER LOC: " << playerPosX << "," << playerPosY << "\n";
-
 	if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Wall) {
-		values.push_back(-9999.f); // Reward
-		values.push_back(0.f); // completed (0 = false, 1 = true);
+		values.push_back(0.f); // Reward
+		values.push_back(1.f); // completed (0 = false, 1 = true);
 	} else if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Finish) {
 		values.push_back(9999.f);
 		values.push_back(1.f);
 	} else
 	{
-		values.push_back(0.f);
+		values.push_back(10.f);
 		values.push_back(0.f);
 	}
-
-	UpdatePlayerTile(true);
 
 	return values;
 }
@@ -312,8 +335,7 @@ void Game::ClampPlayerPosition()
 
 void Game::UpdatePlayerTile(bool ai)
 {
-
-	if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Finish) {
+	if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Finish || tiles[playerPosY][playerPosX]->typeOfTile == TileType::Wall) {
 		ResetGame(!ai);
 	}
 
@@ -323,11 +345,11 @@ void Game::UpdatePlayerTile(bool ai)
 
 void Game::UpdateAllTileText()
 {
-	for(auto& col : tiles)
-	{
-		for(auto& tile : col)
-		{
-			tile->numText.setString(std::to_string(aiRef->QTable[playerPosX * playerPosY - 1]));
-		}
-	}
+	//for(auto& col : tiles)
+	//{
+	//	for(auto& tile : col)
+	//	{
+	//		tile->SetTileNum(aiRef->QTable[playerPosX * playerPosY - 1]);
+	//	}
+	//}
 }

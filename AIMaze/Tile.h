@@ -8,28 +8,23 @@ class Tile
 
 public:
 
-	Tile(const sf::Vector2f& centre);
+	Tile(const sf::Vector2f& centre, const int ID);
 
 	sf::Vector2f tileCentre;
-
-	sf::Font font;
 
 	// The type of tile.
 	TileType typeOfTile = TileType::Blank;
 
 	sf::Sprite sprite;
-	sf::Text numText;
-
-	void SetTileNum(const float value);
-
-	float GetTileNum() {
-		return tileNum;
-	}
 
 	void SetTileSprite(const sf::Texture& texture);
 
+	int GetTileID()
+	{
+		return tileID;
+	}
 protected:
 
-	float tileNum = .0f;
+	int tileID;
 
 };

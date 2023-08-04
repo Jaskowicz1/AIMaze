@@ -8,11 +8,13 @@ class AI {
 
 public:
 
-	AI(const int sizeOfBoard);
+	AI(const int sizeOfBoard, const bool loadQTable);
 
 	void TrainAI(Game* gameRef);
 	
 	void TrainingFunc(Game* gameRef);
+	
+	void DoCompletedPath(Game* gameRef);
 
 	int EpsilonGreedyPolicy(int rowNum);
 
@@ -21,6 +23,10 @@ public:
 	}
 
 	nc::NdArray<int> QTable;
+
+	int currentTrainingEpisode;
+
+	bool isTrainable = true;
 
 protected:
 
@@ -32,7 +38,7 @@ protected:
 
 	const int possibleActions = 4;
 
-	const int n_training_episodes = 10000;
+	const int n_training_episodes = 1000;
 	const float learning_rate = 0.7f;
 
 	const int n_eval_episodes = 100;

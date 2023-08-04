@@ -7,12 +7,14 @@ using namespace Main;
 int main()
 {
     game = std::make_unique<Game>();
-    
-    while (game->IsRunning()) {
-        game->update();
 
-        game->render();
-    }
+	game->Initiate();
+
+	while (game->IsRunning()) {
+		game->update();
+
+		game->render();
+	}
 
 	return 0;
 }

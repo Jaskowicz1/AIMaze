@@ -12,6 +12,13 @@ public:
 	Game();
 	virtual ~Game();
 
+	void Initiate();
+
+	void FinishedAIUpdate()
+	{
+		UpdatePlayerTile(true);
+	}
+
 #pragma region Non-Game Functions
 	
 	void render();
@@ -52,7 +59,7 @@ public:
 private:
 
 	// How many rows and columns?
-	const int gridAmount = 4;
+	const int gridAmount = 5;
 
 	const unsigned int windowWidth = 1280;
 	const unsigned int windowHeight = 720;
@@ -76,5 +83,7 @@ private:
 
 	// Player Start Positions
 	int startPlayerPosX, startPlayerPosY = 0;
+
+	const int amountOfWalls = 3;
 
 };
