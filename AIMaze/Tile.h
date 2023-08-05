@@ -8,7 +8,7 @@ class Tile
 
 public:
 
-	Tile(const sf::Vector2f& centre, const int ID);
+	Tile(const sf::Vector2f& centre, const int id);
 
 	sf::Vector2f tileCentre;
 
@@ -19,10 +19,11 @@ public:
 
 	void SetTileSprite(const sf::Texture& texture);
 
-	int GetTileID()
+	inline const int GetTileID()
 	{
 		return tileID;
 	}
+	
 protected:
 
 	int tileID;

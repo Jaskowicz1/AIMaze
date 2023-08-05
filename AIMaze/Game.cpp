@@ -1,9 +1,9 @@
 #include "Game.h"
 #include <iostream>
 
-Game::Game() {
-
-	window = new sf::RenderWindow(sf::VideoMode(windowWidth, windowHeight), "Testing");
+Game::Game()
+{
+	window = new sf::RenderWindow(sf::VideoMode(windowWidth, windowHeight), "AI Maze project.");
 	// just a bit of fun
 	window->setFramerateLimit(120);
 	window->setVerticalSyncEnabled(false);
@@ -11,21 +11,18 @@ Game::Game() {
 	if (!playerTexture.loadFromFile("Player.png"))
 	{
 		std::cout << "Failed to load Player image.";
-		throw std::exception("Failed to load Player image.");
 		return;
 	}
 
 	if (!wallTexture.loadFromFile("Wall.png"))
 	{
 		std::cout << "Failed to load Wall image.";
-		throw std::exception("Failed to load Wall image.");
 		return;
 	}
 
 	if (!finishTexture.loadFromFile("Finish.png"))
 	{
 		std::cout << "Failed to load Finish image.";
-		throw std::exception("Failed to load Finish image.");
 		return;
 	}
 
@@ -39,40 +36,80 @@ Game::~Game()
 	delete window;
 }
 
-void Game::Initiate()
+void Game::render()
 {
-	InitWorld(true);
+	window->clear(sf::Color::White);
 
-	render();
+	// Draw all grid lines.
+	for (const auto& line : gridLines) {
 
-	char input;
+		const sf::Vertex tempLine[] =
+		{
+			sf::Vertex(line->GetStartLocation(), sf::Color::Black),
+			sf::Vertex(line->GetEndLocation(), sf::Color::Black)
+		};
 
-	bool useSavedTable = false;
-
-	std::cout << "Do you wish to train the AI? No (N/n) will result in the AI playing its known Q-Table. (Y/n)" << "\n";
-
-	std::cin >> input;
-
-	if(input == 'N' || input == 'n')
-	{
-		std::cout << "Understood. Will not train the AI." << "\n";
-		useSavedTable = true;
-		
-	} else if (input != 'Y' && input != 'y')
-	{
-		std::cout << "Did not understand input. Assuming no." << "\n";
-		useSavedTable = true;
+		// verts, vertexcount, type
+		window->draw(tempLine, 2, sf::Lines);
 	}
 
-	aiRef = std::make_unique<AI>(gridAmount, useSavedTable);
-	
-	if(!useSavedTable)
-	{
-		std::cout << "Attempting to train AI..." << "\n";
-		aiRef->TrainAI(this);
+	// Go through all tiles and draw their information.
+	for (const auto& column : tiles) {
+		for (const auto& tile : column) {
+
+			// If a tile hasn't been created correctly but placed in the vector
+			// this will pick it up.
+			if (!tile)
+				continue;
+
+			// sprites can't have an invalid texture if it has been set
+			// so we use a TileType to determine what the tile is.
+			// If it's blank, we don't draw the sprite.
+			if (tile->typeOfTile != TileType::Blank)
+				window->draw(tile->sprite);
+		}
 	}
-	else
-		aiRef->DoCompletedPath(this);
+
+	window->display();
+}
+
+void Game::update()
+{
+	pollEvents();
+}
+
+void Game::pollEvents()
+{
+	while (window->pollEvent(ev)) {
+		switch (ev.type) {
+			// Had to disable this because it seems to keep getting called for no reason?
+			//case sf::Event::Closed:
+				//window->close();
+				//break;
+			case sf::Event::KeyPressed:
+				if (ev.key.code == sf::Keyboard::Escape) {
+					window->close();
+				}
+				else if (ev.key.code == sf::Keyboard::W ||
+					ev.key.code == sf::Keyboard::S) {
+					// Process movement on Y axis.
+					// If W was pressed, move up (1), otherwise move down (-1).
+					ProcessPlayerMovement(sf::Vector2f(
+						.0f,
+						ev.key.code == sf::Keyboard::W ? 1.f : -1.f));
+				}
+				else if(ev.key.code == sf::Keyboard::A || 
+					ev.key.code == sf::Keyboard::D) {
+					// Process movement on X axis.
+					// If A was pressed, move left (-1), otherwise move right (1).
+					ProcessPlayerMovement(sf::Vector2f(
+						ev.key.code == sf::Keyboard::A ? -1.f : 1.f,
+						0.f));
+				}
+
+				break;
+		}
+	}
 }
 
 void Game::InitWorld(const bool random, const std::string& worldFile)
@@ -81,12 +118,12 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 	
 	// World can be initialised more than once
 	// we need to kill everything that exists if there is anything that exists.
-	if (tiles.size() != 0) {
-		tiles.empty();
+	if (!tiles.empty()) {
+		tiles.clear();
 	}
 
-	if (gridLines.size() != 0) {
-		gridLines.empty();
+	if (!gridLines.empty()) {
+		gridLines.clear();
 	}
 
 	playerPosX = 0;
@@ -169,8 +206,6 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 		finishPosX = distrib(gen);
 		finishPosY = distrib(gen);
 	}
-
-	std::cout << "FINISH: " << finishPosX << ", " << finishPosY << "\n";
 	
 	// Set finish point to the random location picked.
 	tiles[finishPosY][finishPosX]->SetTileSprite(finishTexture);
@@ -200,93 +235,51 @@ void Game::InitWorld(const bool random, const std::string& worldFile)
 	std::cout << "Created a random world!" << "\n";
 }
 
-void Game::render()
+void Game::Initiate()
 {
-	window->clear(sf::Color::White);
+	InitWorld(true);
 
-	// Draw all grid lines.
-	for (auto const& line : gridLines) {
+	render();
 
-		const sf::Vertex tempLine[] =
-		{
-			sf::Vertex(line->GetStartLocation(), sf::Color::Black),
-			sf::Vertex(line->GetEndLocation(), sf::Color::Black)
-		};
+	char input;
 
-		// verts, vertexcount, type
-		window->draw(tempLine, 2, sf::Lines);
+	bool useSavedTable = false;
+
+	std::cout << "Do you wish to train the AI? No (N/n) will result in the AI playing its known Q-Table. (Y/n)" << "\n";
+
+	std::cin >> input;
+
+	if(input == 'N' || input == 'n')
+	{
+		std::cout << "Understood. Will not train the AI." << "\n";
+		useSavedTable = true;
+		
+	} else if (input != 'Y' && input != 'y')
+	{
+		std::cout << "Did not understand input. Assuming no." << "\n";
+		useSavedTable = true;
 	}
 
-	// Go through all tiles and draw their information.
-	for (auto const& column : tiles) {
-		for (auto const& tile : column) {
-
-			// If a tile hasn't been created correctly but placed in the vector
-			// this will pick it up.
-			if (!tile)
-				continue;
-
-			// sprites can't have an invalid texture if it has been set
-			// so we use a TileType to determine what the tile is.
-			// If it's blank, we don't draw the sprite.
-			if (tile->typeOfTile != TileType::Blank)
-				window->draw(tile->sprite);
-		}
+	aiRef = std::make_unique<AI>(gridAmount, useSavedTable);
+	
+	if(!useSavedTable)
+	{
+		std::cout << "Attempting to train AI..." << "\n";
+		aiRef->TrainAI(this);
 	}
-
-	window->display();
+	else
+		aiRef->DoCompletedPath(this);
 }
 
-void Game::update()
+void Game::ResetGame(const bool newWorld)
 {
-	pollEvents();
-}
-
-void Game::pollEvents()
-{
-	while (window->pollEvent(ev)) {
-		switch (ev.type) {
-			//case sf::Event::Closed:
-				//window->close();
-				//break;
-			case sf::Event::KeyPressed:
-				if (ev.key.code == sf::Keyboard::Escape) {
-					window->close();
-				}
-				else if (ev.key.code == sf::Keyboard::W ||
-					ev.key.code == sf::Keyboard::S) {
-					// Process movement on Y axis.
-					// If W was pressed, move up (1), otherwise move down (-1).
-					ProcessPlayerMovement(sf::Vector2f(
-						.0f,
-						ev.key.code == sf::Keyboard::W ? 1.f : -1.f));
-				}
-				else if(ev.key.code == sf::Keyboard::A || 
-					ev.key.code == sf::Keyboard::D) {
-					// Process movement on X axis.
-					// If A was pressed, move left (-1), otherwise move right (1).
-					ProcessPlayerMovement(sf::Vector2f(
-						ev.key.code == sf::Keyboard::A ? -1.f : 1.f,
-						0.f));
-				}
-
-				break;
-		}
-	}
-}
-
-void Game::ResetGame(bool newWorld)
-{
-	//std::cout << "Resetting game." << "\n";
-
 	if (newWorld) {
 		InitWorld(true);
+		return;
 	}
 
 	playerPosX = startPlayerPosX;
 	playerPosY = startPlayerPosY;
-
-	return;
 }
 
 void Game::ProcessPlayerMovement(const sf::Vector2f& inputValue)
@@ -304,16 +297,18 @@ void Game::ProcessPlayerMovement(const sf::Vector2f& inputValue)
 		// Think like Unreal's GetForwardVector and GetRightVector, this is essentially what i'm doing.
 		playerPosY = inputValue.y < 0 ? playerPosY + std::abs(inputValue.y) : playerPosY - inputValue.y;
 
+	// Clamp the player's location because we don't want the player trying to go out-of-bounds.
 	ClampPlayerPosition();
 
-	// do checks here for if that tile is the finish.
-
+	// Update the player tile.
 	UpdatePlayerTile(false);
 }
 
 std::vector<float> Game::ProcessAiMovement(const int action)
 {
-	
+	// This vector holds the reward and if we're finished (first value = reward, second value = finished).
+	// finished is either 0 or 1. 1 being finished.
+	// This definitely is not the best way to do it but we're doing it this way.
 	std::vector<float> values;
 
 	tiles[playerPosY][playerPosX]->typeOfTile = TileType::Blank;
@@ -373,24 +368,29 @@ std::vector<float> Game::ProcessAiMovement(const int action)
 		reward -= 9999.f;
 		values.push_back(reward);
 		values.push_back(0.f);
-	} else
+
+		// Because we know the outcome, don't bother with anything below, we've already punished the AI enough.
+		return values;
+	}
+
+	switch (tiles[playerPosY][playerPosX]->typeOfTile)
 	{
-		if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Wall) {
+		case TileType::Wall:
 			// We do not want to reward a negative value for hitting a wall. Whilst its bad, it'll make the tile before
 			// show as really bad, this means we should just leave it as zero.
-			//reward -= 999.f;
 			values.push_back(reward); // Reward
 			values.push_back(1.f); // completed (0 = false, 1 = true);
-		} else if (tiles[playerPosY][playerPosX]->typeOfTile == TileType::Finish) {
+			break;
+		case TileType::Finish:
 			reward += 9999.f;
 			values.push_back(reward);
 			values.push_back(1.f);
-		} else
-		{
+			break;
+		default: // We'll assume blank here.
 			// No reward for a blank tile, but the AI will get an award for moving closer (if they did).
 			values.push_back(reward);
 			values.push_back(0.f);
-		}
+			break;
 	}
 
 	return values;

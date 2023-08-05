@@ -4,37 +4,16 @@
 
 AI::AI(const int sizeOfBoard, const bool loadQTable)
 {
-	QTable = nc::zeros<int>(sizeOfBoard * sizeOfBoard, possibleActions);
+	// Initialise the Q-Table.
+	QTable = std::make_unique<NdArray>(sizeOfBoard * sizeOfBoard, possibleActions);
 	
 	if(loadQTable)
 	{
-		std::ifstream MazeTableFile("CompletedMazeTable.txt");
-		std::string qtableLine;
-
-		int row = 0;
-		int col = 0;
-
-		std::cout << "Loading Q-Table..." << "\n";
-		
-		while (std::getline(MazeTableFile, qtableLine))
+		// Get the completed q-table.
+		if(!QTable->load("CompletedMazeTable.txt"))
 		{
-			std::cout << std::stoi(qtableLine) << "\n";
-			
-			QTable(row, col) = std::stoi(qtableLine);
-
-			if(col % (sizeOfBoard - 1) == 0)
-			{
-				row++;
-				col = 0;
-			}
-
-			col++;
+			std::cout << "No Q-Table was found! Please train the AI first." << "\n";
 		}
-
-		//MazeTableFile.close();
-
-		//boost::detail::Sleep(1000);
-		
 		
 		std::cout << "Loaded Q-Table!" << "\n";
 	}
@@ -43,35 +22,30 @@ AI::AI(const int sizeOfBoard, const bool loadQTable)
 
 	isTrainable = !loadQTable;
 
-	//std::cout << QTable << "\n";
-
+	// Just make sure the user knows.
 	if(loadQTable)
 		std::cout << "Since a Q-Table has been loaded, the AI will NOT be able to train." << "\n";
 }
 
 void AI::TrainAI(Game* gameRef)
 {
+	// Do not let the AI train whilst we're in non-train mode.
 	if(!isTrainable)
 	{
 		std::cout << "The AI is not trainable since it has loaded a Q-Table." << "\n";
 		return;
 	}
-	
-	TrainingFunc(gameRef);
-}
 
-void AI::TrainingFunc(Game* gameRef)
-{
-	std::cout << "Training has begun." << "\n";
-
+	// Does a q-table already exist that's saved?
+	// Whilst we've already asked the user if they want to train, we want to double-check.
 	std::ifstream qtableSaved("CompletedMazeTable.txt");
 
 	if (qtableSaved.good())
 	{
 		char input;
-		
-		std::cout << "A saved QTable already exists and will be overwritten. Are you sure you want to continue? (Y/n)" << "\n";
 
+		// Ask for confirmation.
+		std::cout << "A saved QTable already exists and will be overwritten. Are you sure you want to continue? (Y/n)" << "\n";
 		std::cin >> input;
 
 		if(input == 'N' || input == 'n')
@@ -84,8 +58,11 @@ void AI::TrainingFunc(Game* gameRef)
 			return;
 		}
 
-		qtableSaved.clear();
+		// Close the file
+		qtableSaved.close();
 	}
+
+	std::cout << "Training has begun." << "\n";
 	
 	for (int i = 0; i <= n_training_episodes - 1; i++) {
 
@@ -95,10 +72,12 @@ void AI::TrainingFunc(Game* gameRef)
 		// this does slow down training but it's fine.
 		gameRef->render();
 
+		// Tell the user which training episode we're on.
+		// Should be moved to a debug option.
 		std::cout << "Training episode: " << i << "/" << n_training_episodes << "\n";
 
 		// Calculate epsilon.
-		epsilon = min_epsilon + (max_epsilon - min_epsilon) * nc::exp(-decay_rate * i);
+		epsilon = min_epsilon + (max_epsilon - min_epsilon) * std::exp(-decay_rate * i);
 
 		// Keep references to player position and tile as we don't want it to reset every loop.
 		int playerRow = gameRef->playerPosY;
@@ -132,11 +111,13 @@ void AI::TrainingFunc(Game* gameRef)
 			const int newTileID = gameRef->tiles[newPlayerRow][newPlayerCol]->GetTileID();
 
 			// Update the QTable with the new value from the current action.
-			QTable(currentTileID, action) = QTable(currentTileID, action) + learning_rate * (reward + (gamma * nc::max(QTable.row(newTileID))[0]) - QTable(currentTileID, action));
+			// This is Q(S, A) = Q(S, A) + learningrate * [reward + gamma * Q(S+1, A+1) - Q(S, A)].
+			QTable->GetArray()[currentTileID][action] = QTable->GetArray()[currentTileID][action] + learning_rate * (reward + (gamma * QTable->max(newTileID)) - QTable->GetArray()[currentTileID][action]);
 
 			// Tell the game that the AI has finished movement and calculations.
 			gameRef->FinishedAIUpdate();
 
+			// Update our vars.
 			playerRow = newPlayerRow;
 			playerCol = newPlayerCol;
 			currentTileID = gameRef->tiles[playerRow][playerCol]->GetTileID();
@@ -145,17 +126,18 @@ void AI::TrainingFunc(Game* gameRef)
 			gameRef->update();
 			gameRef->render();
 
-			// If the AI finished the game, move on to the next 
+			// If the AI finished the game, move on to the next training episode as there are no more
+			// steps to take.
 			if (finished)
 				break;
-
-			//boost::detail::Sleep(500);
 		}
 	}
 
+	std::cout << "Training has finished!" << "\n";
 	std::cout << "Dumping QTable to 'CompletedMazeTable.txt'!" << "\n";
-	std::cout << QTable << "\n";
-	QTable.tofile("CompletedMazeTable.txt", '\n');
+	std::cout << QTable->ArrayToString() << "\n";
+	// Dump the QTable to the file, each value will be separated with a new line.
+	QTable->save("CompletedMazeTable.txt");
 }
 
 void AI::DoCompletedPath(Game* gameRef)
@@ -163,16 +145,14 @@ void AI::DoCompletedPath(Game* gameRef)
 	bool finished = false;
 
 	std::cout << "Proceeding to follow the complete path." << "\n";
+	std::cout << QTable->ArrayToString() << "\n";
 	
 	while(!finished)
 	{
-		const int playerRow = gameRef->playerPosY;
-		const int playerCol = gameRef->playerPosX;
-		const int tileID = gameRef->tiles[playerRow][playerCol]->GetTileID();
-		
-		int action = GreedyPolicy(tileID);
+		// Get the best action from the player's current location (tileID).
+		int action = GreedyPolicy(gameRef->tiles[gameRef->playerPosY][gameRef->playerPosX]->GetTileID());
 
-		// Get information from the move we just did.
+		// Perform the move that we got told by the Greedy Policy and retrieve information from it.
 		// Would be better to use a class to hand over the information for this rather than a std::vector but
 		// it works for now (just maybe not the best way to do it).
 		std::vector<float> info = gameRef->ProcessAiMovement(action);
@@ -190,37 +170,13 @@ void AI::DoCompletedPath(Game* gameRef)
 		gameRef->update();
 		gameRef->render();
 
-		// So the user can actually see the AI move properly.
-		boost::detail::Sleep(500);
+		// Only pause if we're not finished, otherwise we're waiting 500ms for no reason.
+		if(!finished)
+		{
+			// So the user can actually see the AI move properly.
+			boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+		}
 	}
 
 	std::cout << "The AI has reached the end!" << "\n";
-}
-
-int AI::EpsilonGreedyPolicy(const int rowNum)
-{
-	int ranNum = RandomNum();
-
-	if (ranNum > epsilon)
-		return nc::argmax(QTable.row(rowNum))[0];
-
-	return RandomAction();
-}
-
-float AI::RandomNum()
-{
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> distrib(0, 100000);
-
-	return static_cast<float>(distrib(gen)) / 100000;
-}
-
-int AI::RandomAction()
-{
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> distrib(0, 3);
-
-	return distrib(gen);
 }

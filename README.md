@@ -13,8 +13,6 @@ I wont be documenting that here but if you would like to know, I go more in dept
 ## Libraries Used
 
 - [SFML](https://www.sfml-dev.org/index.php)
-- [NumCpp](https://github.com/dpilger26/NumCpp)
-- [Boost](https://www.boost.org) | Required by NumCpp.
 
 ## Commands
 

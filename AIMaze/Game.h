@@ -12,9 +12,7 @@ public:
 	Game();
 	virtual ~Game();
 
-	void Initiate();
-
-	void FinishedAIUpdate()
+	inline void FinishedAIUpdate()
 	{
 		UpdatePlayerTile(true);
 	}
@@ -31,13 +29,15 @@ public:
 
 	void InitWorld(const bool random, const std::string& worldFile = "");
 
-	void ResetGame(bool newWorld);
+	void Initiate();
+
+	void ResetGame(const bool newWorld);
 
 	void ProcessPlayerMovement(const sf::Vector2f& inputValue);
 
 	std::vector<float> ProcessAiMovement(const int action);
 
-	const bool IsRunning() {
+	inline const bool IsRunning() {
 		return this->window->isOpen();
 	}
 
@@ -62,7 +62,7 @@ public:
 #pragma endregion
 
 	std::unique_ptr<AI> aiRef;
-	std::thread aiThread;
+	//std::thread aiThread;
 
 private:
 
