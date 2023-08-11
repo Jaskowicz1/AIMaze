@@ -4,8 +4,6 @@
 #include <random>
 #include <iostream>
 #include <fstream>
-#include <boost/thread/thread.hpp> 
-#include <boost/chrono.hpp>
 
 class Game;
 

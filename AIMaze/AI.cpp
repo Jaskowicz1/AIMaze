@@ -1,5 +1,7 @@
 #include "AI.h"
 
+#include <thread>
+
 #include "Game.h"
 
 AI::AI(const int sizeOfBoard, const bool loadQTable)
@@ -174,7 +176,7 @@ void AI::DoCompletedPath(Game* gameRef)
 		if(!finished)
 		{
 			// So the user can actually see the AI move properly.
-			boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
 	}
 
